@@ -74,11 +74,15 @@ class Redis
             $this->_redis = new \Redis();
             if ($this->config['pconnect'])
             {
-                return $this->_redis->pconnect($this->config['host'], $this->config['port'], $this->config['timeout']);
+                $rtn = $this->_redis->pconnect($this->config['host'], $this->config['port'], $this->config['timeout']);
+                $this->_redis->select($this->config['database']);
+                return $rtn;
             }
             else
             {
-                return $this->_redis->connect($this->config['host'], $this->config['port'], $this->config['timeout']);
+                $rtn = $this->_redis->connect($this->config['host'], $this->config['port'], $this->config['timeout']);
+                $this->_redis->select($this->config['database']);
+                return $rtn;
             }
         }
         catch (\RedisException $e)
@@ -107,7 +111,15 @@ class Redis
 
                 \Swoole::$php->log->error(__CLASS__ . " [" . posix_getpid() . "] Swoole Redis[{$this->config['host']}:{$this->config['port']}]
                  Exception(Msg=" . $e->getMessage() . ", Code=" . $e->getCode() . "), Redis->{$method}, Params=" . var_export($args, 1));
-                $this->_redis->close();
+                
+                try
+                {
+                    $this->_redis->close();
+                }
+                catch (\RedisException $e)
+                {
+                }
+                
                 $this->connect();
                 $reConnect = true;
                 continue;
